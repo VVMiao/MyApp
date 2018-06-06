@@ -19,8 +19,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".TextActivity" />
-        <activity android:name=".BookmarksActivity"></activity>
+        <activity android:name=".TextActivity"
+            android:label="文章"/>
+        <activity android:name=".BookmarksActivity"
+            android:label="收藏夹"></activity>
     </application>
 
 </manifest>

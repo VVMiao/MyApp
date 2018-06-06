@@ -6,9 +6,12 @@ import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.view.MenuItemCompat;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -44,16 +47,18 @@ public class MainActivity extends AppCompatActivity {
     private List<News> savaNewsList = new ArrayList<>();
     private Handler handler;
     private SearchView mSearchView;
+    private SwipeRefreshLayout  swipeRefreshLayout;
     private RecyclerView recyclerView;
     private LinearLayoutManager layoutManager;
     private NewsAdapter adapter;
     private boolean closeThread = false;
+    private boolean displayPicture = true;
     private boolean needFoodSafety = true;
     private String[][] foodsafety = {{"吃", "食", "舌尖", "餐", "农产品", "奶", "肉"},
             {"害", "毒", "死", "安", "安全", "违法", "检查", "监管", "问题", "整治", "残留", "销毁", "治理", "查处", "合格"}};
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setNightMode();
         setContentView(R.layout.activity_main);
@@ -64,30 +69,48 @@ public class MainActivity extends AppCompatActivity {
         a3 = pref.getString("a3", a3);
         a4 = pref.getString("a4", a4);
 
+        swipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swiperefreshlayout);
+
         boolean isChangeNightMode = pref.getBoolean("isChangeNightMode", false);
-            if(isChangeNightMode) {
+        if(isChangeNightMode) {
                 SharedPreferences.Editor editor;
                 editor = getSharedPreferences("data", MODE_PRIVATE).edit();
                 editor.putBoolean("isChangeNightMode", false);
                 editor.apply();
                 initNews(false);
                 setRecyclerView();
-            }
-            else {
+        }
+        else {
                 setRecyclerView();
                 initNews(true);
+        }
+
+        swipeRefreshLayout.setColorSchemeColors(Color.BLUE);
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                swipeRefreshLayout.setRefreshing(false);
+                newsList.clear();
+                savaNewsList.clear();
+                adapter.notifyDataSetChanged();
+                initNews(true);
             }
+        });
 
         handler = new Handler() {
             @Override
             public void handleMessage(Message msg) {
-                if(msg.what >= 0) {
-                    adapter.notifyItemChanged(msg.what);
+                if(msg.what == 0) {
+                    int i = msg.arg1;
+                    adapter.notifyItemChanged(i);
+                    if(displayPicture) {
+                        new BitmapTask().execute(newsList.get(i).getPicuri(),Integer.toString(i));
+                    }
+                    if(msg.arg2 == 1) {
+                        Toast.makeText(MainActivity.this, "加载完成", Toast.LENGTH_LONG).show();
+                    }
                 }
-                if(msg.what == -1) {
-                    Toast.makeText(MainActivity.this, "加载完成", Toast.LENGTH_LONG).show();
-                }
-                if(msg.what == -2) {
+                if(msg.what == 1) {
                     adapter.notifyItemRangeChanged(0,newsList.size() - 1);
                 }
             }
@@ -104,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
             public void onItemClick(View view, int position) {
                 News news = newsList.get(position);
                 Intent intent = new Intent(MainActivity.this, TextActivity.class);
-                intent.putExtra("text_uri",news.getUri());
+                intent.putExtra("text_uri", news.getUri());
                 startActivity(intent);
             }
         });
@@ -244,6 +267,13 @@ public class MainActivity extends AppCompatActivity {
         else {
             menu.findItem(R.id.menu_foodsafety).setTitle("取消指定搜索");
         }
+
+        if(displayPicture) {
+            menu.findItem(R.id.menu_picture).setTitle("无图模式：关");
+        }
+        else {
+            menu.findItem(R.id.menu_picture).setTitle("无图模式：开");
+        }
         return super.onPrepareOptionsMenu(menu);
     }
 
@@ -257,25 +287,41 @@ public class MainActivity extends AppCompatActivity {
                 break;
 
             case R.id.txnews:
+                a1 = "http://news.qq.com/";
+                a2 = "div.Q-tpWrap";
+                a3 = "div.Q-tpWrap";
+                a4 = "em";
                 editor = getSharedPreferences("data", MODE_PRIVATE).edit();
-                editor.putString("a1", "http://news.qq.com/");
-                editor.putString("a2", "div.Q-tpWrap");
-                editor.putString("a3", "div.Q-tpWrap");
-                editor.putString("a4", "em");
+                editor.putString("a1", a1);
+                editor.putString("a2", a2);
+                editor.putString("a3", a3);
+                editor.putString("a4", a4);
                 editor.apply();
-                closeThread = true;
-                recreate();
+//                closeThread = true;
+//                recreate();
+                newsList.clear();
+                savaNewsList.clear();
+                adapter.notifyDataSetChanged();
+                initNews(true);
                 break;
 
             case R.id.aiyuke:
+                a1 = "http://www.aiyuke.com/view/cate/index.htm";
+                a2 = "div.news_list_box";
+                a3 = "div.news_list_box";
+                a4 = "h1";
                 editor = getSharedPreferences("data", MODE_PRIVATE).edit();
-                editor.putString("a1", "http://www.aiyuke.com/view/cate/index.htm");
-                editor.putString("a2", "div.news_list_box");
-                editor.putString("a3", "div.news_list_box");
-                editor.putString("a4", "h1");
+                editor.putString("a1", a1);
+                editor.putString("a2", a2);
+                editor.putString("a3", a3);
+                editor.putString("a4", a4);
                 editor.apply();
-                closeThread = true;
-                recreate();
+//                closeThread = true;
+//                recreate();
+                newsList.clear();
+                savaNewsList.clear();
+                adapter.notifyDataSetChanged();
+                initNews(true);
                 break;
 
             case R.id.customize:
@@ -289,6 +335,10 @@ public class MainActivity extends AppCompatActivity {
 
             case R.id.menu_nightmode:
                 setChangeNightMode();
+                break;
+
+            case R.id.menu_picture:
+                displayPicture = !displayPicture;
                 break;
 
             default:
@@ -351,7 +401,7 @@ public class MainActivity extends AppCompatActivity {
                         editor.putString("c3", editdiv2.getText().toString());
                         editor.putString("c4", editdiv3.getText().toString());
                         editor.apply();
-                        closeThread = true;
+//                        closeThread = true;
                         recreate();
                         dialog.dismiss();
                     }
@@ -378,7 +428,7 @@ public class MainActivity extends AppCompatActivity {
             news[i] = newsList.get(i);
         }
         NewsStream.writeNew(news, getApplicationContext());
-        closeThread = true;
+//        closeThread = true;
         recreate();
     }
 
@@ -388,6 +438,46 @@ public class MainActivity extends AppCompatActivity {
         AppCompatDelegate.setDefaultNightMode(nightMode);
     }
 
+    class BitmapTask extends AsyncTask<String, Integer, MyBitmap> {
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+        }
+
+        @Override
+        protected MyBitmap doInBackground(String... strings) {
+            try {
+                Bitmap bitmap;
+                MyBitmap myBitmap;
+                String picuri = strings[0];
+                int i = Integer.parseInt(strings[1]);
+                if(picuri.isEmpty()) {
+                    bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.timg);
+                    myBitmap = new MyBitmap(MyBitmap.getBytes(bitmap),"name");
+                }
+                else {
+                    bitmap = GetPic.getImageBitmap(picuri);
+                    myBitmap = new MyBitmap(MyBitmap.getBytes(bitmap),bitmap.getConfig().name());
+                }
+                newsList.get(i).myBitmap = myBitmap;
+                return myBitmap;
+            }
+            catch (Exception e) {
+                return null;
+            }
+
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            super.onProgressUpdate(values);
+        }
+
+        @Override
+        protected void onPostExecute(MyBitmap myBitmap) {
+            adapter.notifyDataSetChanged();
+        }
+    }
 
     //用Jsoup爬虫
     private void initNews(final boolean need) {
@@ -425,32 +515,26 @@ public class MainActivity extends AppCompatActivity {
                                     }
                                 }
                             }
-                            Bitmap bitmap;
                             MyBitmap myBitmap;
-                            if(picuri.isEmpty()) {
-                                bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.timg);
-                                myBitmap = new MyBitmap(MyBitmap.getBytes(bitmap),"name");
-                            }
-                            else {
-                                bitmap = GetPic.getImageBitmap(picuri);
-                                myBitmap = new MyBitmap(MyBitmap.getBytes(bitmap),bitmap.getConfig().name());
-                            }
-//                            Log.w("ok", "ok");
+                            myBitmap = new MyBitmap(null, null);
                             News news = new News("\t" + elements.get(i).select(a4).text(), uri,
-                                    myBitmap);
+                                    myBitmap, picuri);
                             newsList.add(news);
                             savaNewsList.add(news);
 
-                            if(closeThread) {
-                                i = maxNews;
-                            }
+//                            if(closeThread) {
+//                                i = maxNews;
+//                                closeThread = false;
+//                            }
 
                             Message msg = new Message();
+                            msg.what = 0;
+                            msg.arg1 = i;
                             if(i == Math.min(elements.size(), maxNews) - 1) {
-                                msg.what = -1;
+                                msg.arg2 = 1;
                             }
                             else {
-                                msg.what = i;
+                                msg.arg2 = 0;
                             }
                             handler.sendMessage(msg);
                         }
@@ -462,7 +546,7 @@ public class MainActivity extends AppCompatActivity {
                             savaNewsList.add(i);
                         }
                         Message msg = new Message();
-                        msg.what = -2;
+                        msg.what = 1;
                         handler.sendMessage(msg);
                     }
 //                    Log.w("ojbk", "ojbk");

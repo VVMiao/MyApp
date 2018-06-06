@@ -8,6 +8,8 @@ import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
@@ -88,5 +90,45 @@ public class BookmarksActivity extends AppCompatActivity {
                 }).create();
         longClickView.show();
 
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_bookmarks, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menu_clearbookmarks:
+                setClearBookmarkView();
+                break;
+
+            default:
+                break;
+        }
+        return true;
+    }
+
+    private void setClearBookmarkView() {
+        AlertDialog clearBookmarkView = new AlertDialog.Builder(this)
+                .setTitle("要清除所有收藏夹内容吗？")
+                .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        for(int i = newsList.size() - 1; i >= 0; i--) {
+                            newsList = NewsStream.delectBookmarks(newsList, i,getApplicationContext());
+                        }
+                        adapter.notifyDataSetChanged();
+                    }
+                })
+                .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                    }
+                }).create();
+        clearBookmarkView.show();
     }
 }

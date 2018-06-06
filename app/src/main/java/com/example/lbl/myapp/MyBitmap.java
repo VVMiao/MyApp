@@ -25,14 +25,17 @@ public class MyBitmap implements Serializable {
     }
 
     private void setBitmapBytes(byte[] bitmapBytes) {
-        this.bitmapBytes=bitmapBytes;
+        this.bitmapBytes = bitmapBytes;
     }
 
     private void setName(String name) {
-        this.name=name;
+        this.name = name;
     }
 
     public static Bitmap getBitmap(byte[] data) {
+        if(data == null) {
+            return null;
+        }
         return BitmapFactory.decodeByteArray(data, 0, data.length);
     }
 
